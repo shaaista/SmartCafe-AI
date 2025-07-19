@@ -17,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Development
-        "https://yourapp.vercel.app",  # Replace with your Vercel URL
+        "https://smartcafe-ai.vercel.app",  # Replace with your Vercel URL
         "https://*.vercel.app"  # Allow all Vercel preview deployments
     ],
     allow_credentials=True,
