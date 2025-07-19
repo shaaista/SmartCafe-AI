@@ -42,6 +42,9 @@ interface ChatMessage {
 }
 
 const OwnerDashboard = () => {
+  // API configuration for deployment
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartcafe-ai.onrender.com';
+
   const [uploadedFiles, setUploadedFiles] = useState([
     { name: "orders_jan_2024.csv", date: "2024-01-15", size: "2.3 MB" },
     { name: "orders_dec_2023.csv", date: "2023-12-30", size: "1.8 MB" }
@@ -66,7 +69,7 @@ const OwnerDashboard = () => {
     const fetchSuggestions = async () => {
       try {
         setLoadingSuggestions(true);
-        const response = await fetch('http://127.0.0.1:8000/suggestions');
+        const response = await fetch(`${API_BASE_URL}/suggestions`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -83,14 +86,14 @@ const OwnerDashboard = () => {
     };
 
     fetchSuggestions();
-  }, []);
+  }, [API_BASE_URL]);
 
   // Add this useEffect for fetching reviews
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         setLoadingReviews(true);
-        const response = await fetch('http://127.0.0.1:8000/get-reviews');
+        const response = await fetch(`${API_BASE_URL}/get-reviews`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -113,7 +116,7 @@ const OwnerDashboard = () => {
     };
 
     fetchReviews();
-  }, []);
+  }, [API_BASE_URL]);
 
   const [sentimentData, setSentimentData] = useState({ positive: 0, neutral: 0, negative: 0 });
   const [loadingSentiment, setLoadingSentiment] = useState(true);
@@ -122,7 +125,7 @@ const OwnerDashboard = () => {
     const fetchSentiment = async () => {
       setLoadingSentiment(true);
       try {
-        const resp = await fetch('http://127.0.0.1:8000/sentiment');
+        const resp = await fetch(`${API_BASE_URL}/sentiment`);
         if (!resp.ok) throw new Error('Could not fetch sentiment');
         const data = await resp.json();
         setSentimentData(data.counts || { positive: 0, neutral: 0, negative: 0 });
@@ -133,7 +136,7 @@ const OwnerDashboard = () => {
       }
     };
     fetchSentiment();
-  }, []);
+  }, [API_BASE_URL]);
 
   // Keyword trends state
   const [keywords, setKeywords] = useState<{ keyword: string; count: number }[]>([]);
@@ -143,7 +146,7 @@ const OwnerDashboard = () => {
     const fetchKeywords = async () => {
       try {
         setLoadingKeywords(true);
-        const resp = await fetch("http://127.0.0.1:8000/keyword-trends");
+        const resp = await fetch(`${API_BASE_URL}/keyword-trends`);
         if (!resp.ok) throw new Error("Unable to fetch keyword trends");
         const data = await resp.json();
         if (data.keywords && Array.isArray(data.keywords)) {
@@ -157,7 +160,7 @@ const OwnerDashboard = () => {
       }
     };
     fetchKeywords();
-  }, []);
+  }, [API_BASE_URL]);
 
   // Doughnut chart configuration
   const doughnutData = {
@@ -288,7 +291,7 @@ const OwnerDashboard = () => {
         content: msg.content
       }));
 
-      const response = await fetch('http://127.0.0.1:8000/chatbot/reviews', {
+      const response = await fetch(`${API_BASE_URL}/chatbot/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

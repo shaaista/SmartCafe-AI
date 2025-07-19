@@ -13,58 +13,60 @@ const Index = () => {
   const [reviewText, setReviewText] = useState("");
   const { toast } = useToast();
 
+  // API configuration for deployment
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartcafe-ai.onrender.com';
+
   const handleStarClick = (starIndex: number) => {
     setRating(starIndex);
   };
 
   const handleSubmit = async () => {
-  if (rating === 0) {
-    toast({
-      title: "Please add a rating",
-      description: "Select at least one star to submit your review.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    const response = await fetch("http://localhost:8000/submit-review", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        review_text: reviewText,
-        rating: rating.toString(),
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.status === "success") {
+    if (rating === 0) {
       toast({
-        title: "Review submitted!",
-        description: "Thank you for sharing your experience with us.",
-      });
-      setRating(0);
-      setReviewText("");
-    } else {
-      toast({
-        title: "Submission failed",
-        description: result.message || "An error occurred.",
+        title: "Please add a rating",
+        description: "Select at least one star to submit your review.",
         variant: "destructive",
       });
+      return;
     }
-  } catch (error) {
-    toast({
-      title: "Network Error",
-      description: "Could not reach the server. Try again later.",
-      variant: "destructive",
-    });
-    console.error("Submission error:", error);
-  }
-};
 
+    try {
+      const response = await fetch(`${API_BASE_URL}/submit-review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          review_text: reviewText,
+          rating: rating.toString(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.status === "success") {
+        toast({
+          title: "Review submitted!",
+          description: "Thank you for sharing your experience with us.",
+        });
+        setRating(0);
+        setReviewText("");
+      } else {
+        toast({
+          title: "Submission failed",
+          description: result.message || "An error occurred.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Could not reach the server. Try again later.",
+        variant: "destructive",
+      });
+      console.error("Submission error:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-warm">
