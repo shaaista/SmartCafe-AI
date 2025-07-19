@@ -1,0 +1,41 @@
+ # Dependencies
+node_modules/
+backend/venv/
+backend/__pycache__/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Build files
+frontend/dist/
+frontend/build/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+
