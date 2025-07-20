@@ -17,10 +17,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Development
-        "https://smartcafe-ai.vercel.app",  # Your actual Vercel URL
-        "https://*.vercel.app",  # Allow all Vercel preview deployments
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:3000",  # Alternative localhost
+        "https://smart-cafe-ai.vercel.app",  # Your ACTUAL Vercel URL (with hyphen)
+        "https://smartcafe-ai.vercel.app",   # Keep the old one just in case
+        "https://*.vercel.app"  # Allow all Vercel deployments
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -33,6 +32,7 @@ app.add_middleware(
         "X-Requested-With",
     ],
 )
+
 
 # Include routers
 app.include_router(suggestion_router)
