@@ -11,8 +11,8 @@ async def get_reviews():
     try:
         logger.info("Fetching reviews from Supabase...")
         
-        # Use created_at if timestamp column doesn't exist, or add both as fallback
-        response = supabase.table("reviews").select("*").order("created_at", desc=True).execute()
+        # Use 'timestamp' column as shown in your table
+        response = supabase.table("reviews").select("*").order("timestamp", desc=True).execute()
         
         if response.data is not None:
             logger.info(f"Successfully fetched {len(response.data)} reviews")
@@ -24,7 +24,7 @@ async def get_reviews():
         else:
             logger.warning("No reviews found in database")
             return {
-                "status": "success",
+                "status": "success", 
                 "data": [],
                 "count": 0
             }

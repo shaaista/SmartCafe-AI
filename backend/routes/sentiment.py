@@ -22,8 +22,8 @@ async def sentiment_analysis():
     try:
         logger.info("Fetching reviews for sentiment analysis...")
         
-        # Fetch reviews directly from Supabase
-        response = supabase.table("reviews").select("*").execute()
+        # Use 'timestamp' column as shown in your table
+        response = supabase.table("reviews").select("*").order("timestamp", desc=True).execute()
         
         if not response.data:
             logger.info("No reviews found for sentiment analysis")
@@ -62,7 +62,7 @@ async def sentiment_analysis():
                 "review_text": text,
                 "sentiment": label,
                 "compound": compound,
-                "timestamp": review.get("created_at", review.get("timestamp")),
+                "timestamp": review.get("timestamp"),
                 "rating": rating,
             })
 
