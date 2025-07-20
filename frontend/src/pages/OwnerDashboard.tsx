@@ -342,24 +342,40 @@ const OwnerDashboard = () => {
     }
   };
 
-  // FIXED: Helper functions to parse AI suggestions into two sections
+  // SIMPLIFIED AI Suggestions parsing - splits content into two boxes
   const parseSuggestionsForPositive = (suggestionsText: string) => {
     if (!suggestionsText || suggestionsText.length < 50) {
       return 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.';
     }
     
-    // Find the start of section 1 and end at section 2
-    const text = suggestionsText.trim();
-    const section1Start = text.search(/1\.\s*Customers love:/i);
-    const section2Start = text.search(/2\.\s*(Areas that need improvement|Areas for improvement)/i);
+    // Find section 1 (Customers love) - everything until section 2
+    const lines = suggestionsText.split('\n');
+    let positiveContent = '';
+    let foundStart = false;
     
-    if (section1Start !== -1) {
-      const endPos = section2Start !== -1 ? section2Start : text.length;
-      const positiveSection = text.substring(section1Start, endPos).trim();
-      return positiveSection || 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      
+      // Start capturing when we find "1. Customers love:" or similar
+      if ((cleanLine.includes('1.') && cleanLine.toLowerCase().includes('customers love')) || 
+          (cleanLine.toLowerCase().includes('customers love') && cleanLine.includes(':'))) {
+        foundStart = true;
+        positiveContent += cleanLine + '\n';
+        continue;
+      }
+      
+      // Stop when we hit section 2
+      if (foundStart && (cleanLine.includes('2.') || cleanLine.toLowerCase().includes('areas that need improvement'))) {
+        break;
+      }
+      
+      // Continue capturing if we've started and line has content
+      if (foundStart && cleanLine.length > 0) {
+        positiveContent += cleanLine + '\n';
+      }
     }
     
-    return 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
+    return positiveContent.trim() || 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
   };
 
   const parseSuggestionsForImprovement = (suggestionsText: string) => {
@@ -367,16 +383,30 @@ const OwnerDashboard = () => {
       return 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.';
     }
     
-    // Find section 2 and include everything after it (including section 3)
-    const text = suggestionsText.trim();
-    const section2Start = text.search(/2\.\s*(Areas that need improvement|Areas for improvement)/i);
+    // Find everything from section 2 onwards (Areas for improvement + recommendations)
+    const lines = suggestionsText.split('\n');
+    let improvementContent = '';
+    let foundStart = false;
     
-    if (section2Start !== -1) {
-      const improvementSection = text.substring(section2Start).trim();
-      return improvementSection || 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      
+      // Start capturing when we find section 2 or 3
+      if ((cleanLine.includes('2.') && cleanLine.toLowerCase().includes('areas')) ||
+          (cleanLine.includes('3.') && cleanLine.toLowerCase().includes('recommendations')) ||
+          cleanLine.toLowerCase().includes('areas that need improvement')) {
+        foundStart = true;
+        improvementContent += cleanLine + '\n';
+        continue;
+      }
+      
+      // Continue capturing everything after we've started
+      if (foundStart && cleanLine.length > 0) {
+        improvementContent += cleanLine + '\n';
+      }
     }
     
-    return 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
+    return improvementContent.trim() || 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -739,7 +769,7 @@ const OwnerDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* AI Suggestions for Reviews - FIXED PARSING */}
+            {/* AI Suggestions for Reviews - FIXED VERSION WITH BETTER PARSING */}
             <Card className="shadow-warm border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
