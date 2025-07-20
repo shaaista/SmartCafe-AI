@@ -342,78 +342,6 @@ const OwnerDashboard = () => {
     }
   };
 
-  // Helper function to parse suggestions
-  // Helper function to parse suggestions - UPDATED VERSION
-const parseSuggestions = (suggestionsText: string) => {
-  // If the suggestions text is short or looks like fallback text, return the raw text
-  if (suggestionsText.length < 100 || suggestionsText.includes("Customers consistently praise")) {
-    return {
-      positiveFeedback: 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.',
-      areasForImprovement: 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.'
-    };
-  }
-
-  // For AI-generated content, try to parse it intelligently
-  const lines = suggestionsText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
-  let positiveFeedback = '';
-  let areasForImprovement = '';
-  let currentSection = '';
-
-  for (const line of lines) {
-    const lowerLine = line.toLowerCase();
-    
-    // Check for positive sections
-    if (lowerLine.includes('customers love') || 
-        lowerLine.includes('positive') || 
-        lowerLine.includes('what customers love') ||
-        lowerLine.includes('1.')) {
-      currentSection = 'positive';
-      if (lowerLine.includes('1.') || lowerLine.includes('customers love')) {
-        positiveFeedback += line + '\n';
-      }
-    }
-    // Check for improvement sections
-    else if (lowerLine.includes('areas that need improvement') || 
-             lowerLine.includes('improvement') || 
-             lowerLine.includes('2.')) {
-      currentSection = 'improvement';
-      if (lowerLine.includes('2.') || lowerLine.includes('areas')) {
-        areasForImprovement += line + '\n';
-      }
-    }
-    // Add content to current section
-    else if (currentSection === 'positive' && line.startsWith('   -')) {
-      positiveFeedback += line + '\n';
-    }
-    else if (currentSection === 'improvement' && line.startsWith('   -')) {
-      areasForImprovement += line + '\n';
-    }
-    // Handle numbered recommendations section
-    else if (lowerLine.includes('3.') || lowerLine.includes('recommendations')) {
-      currentSection = 'improvement';
-      areasForImprovement += line + '\n';
-    }
-    else if (currentSection === 'improvement' && line.startsWith('   -')) {
-      areasForImprovement += line + '\n';
-    }
-  }
-
-  // If parsing failed, display the raw AI response
-  if (!positiveFeedback.trim() && !areasForImprovement.trim()) {
-    return {
-      positiveFeedback: suggestionsText.substring(0, suggestionsText.length / 2),
-      areasForImprovement: suggestionsText.substring(suggestionsText.length / 2)
-    };
-  }
-
-  return {
-    positiveFeedback: positiveFeedback.trim() || 'Your AI-generated positive feedback analysis is available in the full suggestions.',
-    areasForImprovement: areasForImprovement.trim() || 'Your AI-generated improvement recommendations are available in the full suggestions.'
-  };
-};
-
-
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -774,7 +702,7 @@ const parseSuggestions = (suggestionsText: string) => {
               </CardContent>
             </Card>
 
-            {/* AI Suggestions for Reviews - UPDATED WITH BACKEND DATA */}
+            {/* AI Suggestions for Reviews - FIXED VERSION */}
             <Card className="shadow-warm border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -785,30 +713,20 @@ const parseSuggestions = (suggestionsText: string) => {
               <CardContent>
                 {loadingSuggestions ? (
                   <div className="space-y-3">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg animate-pulse">
-                      <div className="h-4 bg-green-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-green-200 rounded w-full mb-1"></div>
-                      <div className="h-3 bg-green-200 rounded w-5/6"></div>
-                    </div>
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg animate-pulse">
-                      <div className="h-4 bg-amber-200 rounded w-2/3 mb-2"></div>
-                      <div className="h-3 bg-amber-200 rounded w-full mb-1"></div>
-                      <div className="h-3 bg-amber-200 rounded w-4/5"></div>
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg animate-pulse">
+                      <div className="h-4 bg-blue-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-blue-200 rounded w-full mb-1"></div>
+                      <div className="h-3 bg-blue-200 rounded w-5/6"></div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h4 className="font-semibold text-green-800 mb-2">Positive Feedback Trends</h4>
-                      <div className="text-sm text-green-700 whitespace-pre-line">
-                        {parseSuggestions(suggestions).positiveFeedback}
-                      </div>
-                    </div>
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <h4 className="font-semibold text-amber-800 mb-2">Areas for Improvement</h4>
-                      <div className="text-sm text-amber-700 whitespace-pre-line">
-                        {parseSuggestions(suggestions).areasForImprovement}
-                      </div>
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <Bot className="h-4 w-4" />
+                      AI Business Analysis
+                    </h4>
+                    <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                      {suggestions}
                     </div>
                   </div>
                 )}
