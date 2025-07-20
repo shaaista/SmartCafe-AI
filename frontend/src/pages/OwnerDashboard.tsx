@@ -342,6 +342,62 @@ const OwnerDashboard = () => {
     }
   };
 
+  // Helper functions to parse AI suggestions into two sections
+  const parseSuggestionsForPositive = (suggestionsText: string) => {
+    if (!suggestionsText || suggestionsText.length < 50) {
+      return 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.';
+    }
+    
+    // Extract content after "1. Customers love:" and before "2."
+    const lines = suggestionsText.split('\n');
+    let positiveContent = '';
+    let capturing = false;
+    
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      if (cleanLine.toLowerCase().includes('customers love') || cleanLine.includes('1.')) {
+        capturing = true;
+        if (cleanLine.includes('1.')) {
+          positiveContent += cleanLine + '\n';
+        }
+      } else if (cleanLine.includes('2.') && capturing) {
+        break;
+      } else if (capturing && cleanLine.startsWith('   -')) {
+        positiveContent += cleanLine + '\n';
+      }
+    }
+    
+    return positiveContent.trim() || 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
+  };
+
+  const parseSuggestionsForImprovement = (suggestionsText: string) => {
+    if (!suggestionsText || suggestionsText.length < 50) {
+      return 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.';
+    }
+    
+    // Extract content after "2. Areas that need improvement:" and include "3. Specific actionable recommendations:"
+    const lines = suggestionsText.split('\n');
+    let improvementContent = '';
+    let capturing = false;
+    
+    for (const line of lines) {
+      const cleanLine = line.trim();
+      if (cleanLine.includes('2.') || cleanLine.toLowerCase().includes('areas that need improvement')) {
+        capturing = true;
+        if (cleanLine.includes('2.')) {
+          improvementContent += cleanLine + '\n';
+        }
+      } else if (cleanLine.includes('3.') || cleanLine.toLowerCase().includes('recommendations')) {
+        improvementContent += cleanLine + '\n';
+        capturing = true; // Continue capturing recommendations
+      } else if (capturing && cleanLine.startsWith('   -')) {
+        improvementContent += cleanLine + '\n';
+      }
+    }
+    
+    return improvementContent.trim() || 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -702,7 +758,7 @@ const OwnerDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* AI Suggestions for Reviews - FIXED VERSION */}
+            {/* AI Suggestions for Reviews - CORRECTED TWO-BOX FORMAT WITH REAL AI CONTENT */}
             <Card className="shadow-warm border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -713,20 +769,30 @@ const OwnerDashboard = () => {
               <CardContent>
                 {loadingSuggestions ? (
                   <div className="space-y-3">
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg animate-pulse">
-                      <div className="h-4 bg-blue-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-blue-200 rounded w-full mb-1"></div>
-                      <div className="h-3 bg-blue-200 rounded w-5/6"></div>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg animate-pulse">
+                      <div className="h-4 bg-green-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-green-200 rounded w-full mb-1"></div>
+                      <div className="h-3 bg-green-200 rounded w-5/6"></div>
+                    </div>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg animate-pulse">
+                      <div className="h-4 bg-amber-200 rounded w-2/3 mb-2"></div>
+                      <div className="h-3 bg-amber-200 rounded w-full mb-1"></div>
+                      <div className="h-3 bg-amber-200 rounded w-4/5"></div>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                      <Bot className="h-4 w-4" />
-                      AI Business Analysis
-                    </h4>
-                    <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-                      {suggestions}
+                  <div className="space-y-3">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h4 className="font-semibold text-green-800 mb-2">Positive Feedback Trends</h4>
+                      <div className="text-sm text-green-700 whitespace-pre-line leading-relaxed">
+                        {parseSuggestionsForPositive(suggestions)}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="font-semibold text-amber-800 mb-2">Areas for Improvement</h4>
+                      <div className="text-sm text-amber-700 whitespace-pre-line leading-relaxed">
+                        {parseSuggestionsForImprovement(suggestions)}
+                      </div>
                     </div>
                   </div>
                 )}

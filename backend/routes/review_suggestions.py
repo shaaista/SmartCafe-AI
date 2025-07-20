@@ -15,14 +15,13 @@ async def get_suggestions():
     try:
         logger.info("=== Starting AI Suggestions Generation ===")
         
-        # Check API key first
         if not OPENROUTER_API_KEY:
             logger.error("❌ OpenRouter API key not found")
             return {"suggestions": "AI suggestions are temporarily unavailable. API key not configured."}
         
         logger.info("✅ OpenRouter API key found")
         
-        # Fetch reviews from Supabase
+        # Fetch recent reviews from Supabase
         logger.info("📊 Fetching reviews from Supabase...")
         try:
             response = supabase.table("reviews").select("review_text, rating, timestamp").order("timestamp", desc=True).limit(10).execute()
@@ -64,7 +63,6 @@ Keep it concise and practical."""
             base_url="https://openrouter.ai/api/v1"
         )
 
-        # Make the API call using new syntax
         try:
             response = client.chat.completions.create(
                 model="mistralai/mistral-7b-instruct:free",
