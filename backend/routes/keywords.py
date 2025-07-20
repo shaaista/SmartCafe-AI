@@ -26,10 +26,11 @@ except LookupError:
 
 @router.get("/keyword-trends")
 async def keyword_analysis():
-    """Dynamic keyword analysis that adapts to actual review content"""
+    """Smart keyword analysis focused on cafe-specific meaningful terms"""
     try:
+        logger.info("Starting intelligent keyword analysis...")
+        
         # Fetch reviews directly from Supabase
-        logger.info("Fetching reviews for keyword analysis...")
         response = supabase.table("reviews").select("*").execute()
         
         if not response.data:
@@ -41,72 +42,43 @@ async def keyword_analysis():
             }
         
         reviews = response.data
-        logger.info(f"Analyzing {len(reviews)} reviews for keywords")
+        logger.info(f"Analyzing {len(reviews)} reviews for meaningful keywords")
         
-        # Analyze each review dynamically
-        sentiment_keywords = {"positive": [], "neutral": [], "negative": []}
-        
+        # Extract smart keywords from all reviews
+        all_keywords = []
         for review in reviews:
             text = review.get("review_text", "")
             rating = review.get("rating", 3)
             
-            # Determine sentiment
-            if rating >= 4:
-                sentiment = "positive"
-            elif rating >= 3:
-                sentiment = "neutral"
-            else:
-                sentiment = "negative"
-            
-            # Extract meaningful keywords from actual text
-            keywords = extract_dynamic_keywords(text)
-            sentiment_keywords[sentiment].extend(keywords)
+            # Get cafe-specific keywords
+            keywords = extract_smart_cafe_keywords(text, rating)
+            all_keywords.extend(keywords)
         
-        # Get top keywords for each sentiment
+        # Count keyword frequencies
+        keyword_counts = Counter(all_keywords)
+        
+        # Get top 8 most relevant keywords
+        top_keywords = keyword_counts.most_common(8)
+        
+        # Format results with additional context
         results = []
+        total_reviews = len(reviews)
         
-        # Get 3 positive keywords
-        positive_counts = Counter(sentiment_keywords["positive"])
-        top_positive = positive_counts.most_common(3)
-        for keyword, count in top_positive:
+        for keyword, count in top_keywords:
+            percentage = round((count / total_reviews) * 100, 1)
             results.append({
-                "keyword": keyword,
+                "keyword": keyword.title(),  # Capitalize for better presentation
                 "count": count,
-                "sentiment_breakdown": {"positive": count, "neutral": 0, "negative": 0},
-                "dominant_sentiment": "positive",
-                "percentage": round((count / len(reviews)) * 100, 1)
+                "percentage": percentage,
+                "relevance_score": calculate_relevance_score(keyword, count, total_reviews)
             })
         
-        # Get 3 neutral keywords
-        neutral_counts = Counter(sentiment_keywords["neutral"])
-        top_neutral = neutral_counts.most_common(3)
-        for keyword, count in top_neutral:
-            results.append({
-                "keyword": keyword,
-                "count": count,
-                "sentiment_breakdown": {"positive": 0, "neutral": count, "negative": 0},
-                "dominant_sentiment": "neutral",
-                "percentage": round((count / len(reviews)) * 100, 1)
-            })
-        
-        # Get 2 negative keywords
-        negative_counts = Counter(sentiment_keywords["negative"])
-        top_negative = negative_counts.most_common(2)
-        for keyword, count in top_negative:
-            results.append({
-                "keyword": keyword,
-                "count": count,
-                "sentiment_breakdown": {"positive": 0, "neutral": 0, "negative": count},
-                "dominant_sentiment": "negative",
-                "percentage": round((count / len(reviews)) * 100, 1)
-            })
-        
-        logger.info(f"Generated {len(results)} keywords")
+        logger.info(f"Generated {len(results)} relevant keywords")
         return {
             "keywords": results,
-            "total_keywords_analyzed": sum(len(keywords) for keywords in sentiment_keywords.values()),
-            "unique_keywords": len(set(sum(sentiment_keywords.values(), []))),
-            "total_reviews": len(reviews)
+            "total_keywords_analyzed": len(all_keywords),
+            "unique_keywords": len(set(all_keywords)),
+            "total_reviews": total_reviews
         }
         
     except Exception as e:
@@ -118,68 +90,118 @@ async def keyword_analysis():
             "total_reviews": 0
         }
 
-def extract_dynamic_keywords(text: str) -> List[str]:
-    """Extract meaningful keywords from actual review text"""
+def extract_smart_cafe_keywords(text: str, rating: int) -> List[str]:
+    """Extract only meaningful, cafe-relevant keywords from review text"""
     if not text or len(text.strip()) < 3:
         return []
     
-    text = text.lower()
+    text = text.lower().strip()
     keywords = []
     
-    # Enhanced stopwords for cafe context
-    stop_words = set(stopwords.words('english'))
-    cafe_stopwords = {
-        'cafe', 'coffee', 'shop', 'place', 'time', 'get', 'go', 'came', 
-        'went', 'really', 'also', 'would', 'could', 'should', 'one', 'two', 
-        'three', 'got', 'said', 'say', 'come', 'back', 'like', 'much', 'well',
-        'think', 'know', 'make', 'take', 'give', 'see', 'look', 'try', 'want',
-        'need', 'lot', 'bit', 'little', 'big', 'small', 'right', 'wrong'
-    }
-    stop_words.update(cafe_stopwords)
-    
-    # Extract meaningful adjectives and nouns
-    try:
-        tokens = word_tokenize(text)
-        pos_tags = nltk.pos_tag(tokens)
+    # Cafe-specific keyword categories with variations
+    cafe_keyword_map = {
+        # Service Quality
+        "excellent_service": ["excellent service", "great service", "amazing service", "outstanding service", "exceptional service"],
+        "poor_service": ["poor service", "bad service", "terrible service", "awful service", "horrible service"],
+        "fast_service": ["quick service", "fast service", "speedy service", "prompt service"],
+        "slow_service": ["slow service", "sluggish service", "delayed service"],
+        "friendly_staff": ["friendly staff", "nice staff", "kind staff", "helpful staff", "polite staff", "courteous staff"],
+        "rude_staff": ["rude staff", "unfriendly staff", "impolite staff", "mean staff"],
         
-        for word, pos in pos_tags:
-            if (word.lower() not in stop_words and 
-                len(word) > 2 and 
-                word.isalpha() and
-                pos in ['JJ', 'JJR', 'JJS', 'NN', 'NNS']):
-                keywords.append(word.lower())
-    except:
-        # Fallback if NLTK fails
-        tokens = re.findall(r'\b\w+\b', text)
-        for word in tokens:
-            if (word.lower() not in stop_words and 
-                len(word) > 2 and 
-                word.isalpha()):
-                keywords.append(word.lower())
-    
-    # Extract specific cafe-related terms
-    cafe_terms = {
-        'service': ['service', 'staff', 'waiter', 'waitress', 'barista'],
-        'fast': ['fast', 'quick', 'speedy'],
-        'slow': ['slow', 'waited', 'waiting'],
-        'friendly': ['friendly', 'nice', 'kind', 'polite', 'helpful'],
-        'rude': ['rude', 'unfriendly', 'impolite'],
-        'delicious': ['delicious', 'tasty', 'amazing', 'excellent'],
-        'terrible': ['terrible', 'awful', 'horrible', 'bad'],
-        'expensive': ['expensive', 'pricey', 'costly', 'overpriced'],
-        'cheap': ['cheap', 'affordable', 'reasonable'],
-        'clean': ['clean', 'tidy', 'spotless'],
-        'dirty': ['dirty', 'messy', 'unclean'],
-        'cozy': ['cozy', 'comfortable'],
-        'noisy': ['noisy', 'loud']
+        # Food & Beverage Quality
+        "great_coffee": ["amazing coffee", "excellent coffee", "great coffee", "perfect coffee", "delicious coffee", "fantastic coffee"],
+        "bad_coffee": ["terrible coffee", "awful coffee", "bad coffee", "horrible coffee", "disgusting coffee"],
+        "strong_coffee": ["strong coffee", "bold coffee", "rich coffee"],
+        "weak_coffee": ["weak coffee", "watery coffee", "bland coffee"],
+        "fresh_food": ["fresh food", "fresh pastries", "fresh sandwiches"],
+        "stale_food": ["stale food", "old food", "stale pastries"],
+        
+        # Pricing
+        "expensive": ["expensive", "overpriced", "too pricey", "costly", "high prices"],
+        "affordable": ["affordable", "reasonable prices", "good value", "cheap", "inexpensive"],
+        "great_value": ["great value", "good value", "worth it", "value for money"],
+        
+        # Atmosphere & Environment
+        "cozy_atmosphere": ["cozy", "comfortable", "relaxing", "peaceful", "warm atmosphere", "inviting"],
+        "noisy": ["noisy", "loud", "chaotic", "too loud"],
+        "clean": ["clean", "spotless", "tidy", "well-maintained", "hygienic"],
+        "dirty": ["dirty", "messy", "unclean", "filthy", "unsanitary"],
+        "nice_decor": ["beautiful decor", "nice decor", "lovely interior", "great ambiance", "cute place"],
+        
+        # Wait Time
+        "long_wait": ["long wait", "slow service", "waited forever", "took too long"],
+        "quick_service": ["quick", "fast", "no wait", "immediate service"],
+        
+        # Overall Experience
+        "highly_recommend": ["highly recommend", "definitely recommend", "must visit", "come back"],
+        "disappointed": ["disappointed", "let down", "not impressed", "underwhelmed"],
+        "love_this_place": ["love this place", "favorite cafe", "best cafe", "amazing place"],
+        
+        # Specific Items
+        "great_pastries": ["delicious pastries", "amazing pastries", "fresh pastries", "great bakery items"],
+        "good_wifi": ["good wifi", "fast internet", "reliable wifi"],
+        "limited_seating": ["crowded", "no seats", "packed", "busy"],
+        
+        # Special Features (based on your reviews mentioning a cat)
+        "cafe_cat": ["cat", "kitty", "cute cat", "friendly cat"],
     }
     
-    for main_term, variations in cafe_terms.items():
+    # Extract keywords based on exact phrase matches
+    for main_keyword, variations in cafe_keyword_map.items():
         for variation in variations:
             if variation in text:
-                keywords.append(main_term)
-                break
+                keywords.append(main_keyword.replace('_', ' '))
+                break  # Only add once per main category
     
-    # Remove duplicates
-    unique_keywords = list(dict.fromkeys(keywords))
-    return unique_keywords[:15]  # Limit to prevent overflow
+    # Extract single meaningful adjectives (quality-focused)
+    quality_adjectives = {
+        'delicious', 'tasty', 'amazing', 'excellent', 'outstanding', 'perfect', 'wonderful',
+        'terrible', 'awful', 'horrible', 'disgusting', 'bland', 'bitter',
+        'friendly', 'helpful', 'rude', 'unprofessional',
+        'clean', 'dirty', 'fresh', 'stale',
+        'expensive', 'cheap', 'overpriced', 'affordable',
+        'cozy', 'comfortable', 'noisy', 'crowded', 'spacious',
+        'fast', 'slow', 'quick', 'prompt'
+    }
+    
+    # Tokenize and check for quality adjectives
+    words = re.findall(r'\b[a-zA-Z]+\b', text)
+    for word in words:
+        if word.lower() in quality_adjectives and len(word) > 3:
+            keywords.append(word.lower())
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_keywords = []
+    for keyword in keywords:
+        if keyword not in seen and len(keyword) > 2:
+            seen.add(keyword)
+            unique_keywords.append(keyword)
+    
+    return unique_keywords[:5]  # Limit to 5 keywords per review
+
+def calculate_relevance_score(keyword: str, count: int, total_reviews: int) -> float:
+    """Calculate relevance score for keyword ranking"""
+    frequency_score = count / total_reviews
+    
+    # Boost score for highly relevant cafe terms
+    relevance_multipliers = {
+        'service': 1.5,
+        'coffee': 1.5,
+        'staff': 1.4,
+        'food': 1.3,
+        'atmosphere': 1.3,
+        'clean': 1.2,
+        'friendly': 1.2,
+        'delicious': 1.2,
+        'expensive': 1.1,
+        'cozy': 1.1
+    }
+    
+    multiplier = 1.0
+    for term, mult in relevance_multipliers.items():
+        if term in keyword.lower():
+            multiplier = mult
+            break
+    
+    return round(frequency_score * multiplier * 100, 2)
