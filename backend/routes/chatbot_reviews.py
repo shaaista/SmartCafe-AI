@@ -1,5 +1,5 @@
 import os
-import openai
+from openai import OpenAI
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
@@ -26,7 +26,6 @@ class ChatRequest(BaseModel):
 async def fetch_recent_reviews():
     """Fetch recent reviews directly from Supabase"""
     try:
-        # Use 'timestamp' column as shown in your table
         response = supabase.table("reviews").select("review_text, rating, timestamp").order("timestamp", desc=True).limit(30).execute()
         
         if response.data:
@@ -39,7 +38,7 @@ async def fetch_recent_reviews():
                     f"\nDate: {review.get('timestamp', 'Unknown')}"
                     f"\nComment: \"{review.get('review_text', 'No comment')}\"\n---"
                 )
-            return "\n".join(formatted_reviews[:20])  # Limit to prevent token overflow
+            return "\n".join(formatted_reviews[:20])
         return "No reviews found in the database."
     except Exception as e:
         logger.error(f"Error fetching reviews for chatbot: {e}")
@@ -68,27 +67,13 @@ async def chat_with_review_bot(request: ChatRequest):
 Recent Customer Reviews:
 {reviews_data}
 
-🧠 **CONVERSATION RULES:**
-1. **CONTEXT AWARENESS**: Always read the ENTIRE conversation history before responding
-2. **FOLLOW-UP COMMANDS**: When user says:
-   - "Simplify your response" → Make your PREVIOUS response shorter
-   - "Tell me more" → Elaborate on your PREVIOUS response
-   - "One line answer" → Condense PREVIOUS response to one sentence
-
-3. **USE ACTUAL DATA**: Reference the real customer reviews above when answering about:
-   - Best/worst comments
-   - Common complaints  
-   - Customer praise
-   - Areas for improvement
-
 Provide practical business advice based on the reviews and maintain conversational context."""
 
         # Build conversation
         messages = [{"role": "system", "content": system_prompt}]
         
-        # Add recent chat history (limit to prevent token overflow)
         if request.chat_history:
-            recent_history = request.chat_history[-8:]  # Last 4 exchanges
+            recent_history = request.chat_history[-8:]
             for msg in recent_history:
                 messages.append({"role": msg.role, "content": msg.content})
         
@@ -96,19 +81,22 @@ Provide practical business advice based on the reviews and maintain conversation
 
         logger.info("Calling OpenRouter for chatbot response...")
 
-        # OpenRouter API call with timeout and error handling
+        # Initialize OpenAI client with OpenRouter
+        client = OpenAI(
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1"
+        )
+
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="mistralai/mistral-7b-instruct:free",
                 messages=messages,
-                api_key=OPENROUTER_API_KEY,
-                base_url="https://openrouter.ai/api/v1",
                 max_tokens=1000,
                 temperature=0.6,
                 timeout=25
             )
             
-            answer = response["choices"][0]["message"]["content"]
+            answer = response.choices[0].message.content
             logger.info("Chatbot response generated successfully")
             
             return {"status": "success", "answer": answer}
@@ -117,7 +105,7 @@ Provide practical business advice based on the reviews and maintain conversation
             logger.error(f"OpenRouter API error: {api_error}")
             return {
                 "status": "error",
-                "answer": "I'm having trouble connecting to my AI service right now. Please try again in a moment, or ask a simpler question about your reviews."
+                "answer": "I'm having trouble connecting to my AI service right now. Please try again in a moment."
             }
         
     except Exception as e:
