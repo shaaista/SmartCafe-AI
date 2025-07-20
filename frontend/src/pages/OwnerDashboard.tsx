@@ -343,29 +343,76 @@ const OwnerDashboard = () => {
   };
 
   // Helper function to parse suggestions
-  const parseSuggestions = (suggestionsText: string) => {
-    const lines = suggestionsText.split('\n');
-    let positiveFeedback = '';
-    let areasForImprovement = '';
-    let currentSection = '';
+  // Helper function to parse suggestions - UPDATED VERSION
+const parseSuggestions = (suggestionsText: string) => {
+  // If the suggestions text is short or looks like fallback text, return the raw text
+  if (suggestionsText.length < 100 || suggestionsText.includes("Customers consistently praise")) {
+    return {
+      positiveFeedback: 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.',
+      areasForImprovement: 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.'
+    };
+  }
 
-    for (const line of lines) {
-      if (line.toLowerCase().includes('positive feedback trends')) {
-        currentSection = 'positive';
-      } else if (line.toLowerCase().includes('areas for improvement')) {
-        currentSection = 'improvement';
-      } else if (line.trim() && currentSection === 'positive') {
+  // For AI-generated content, try to parse it intelligently
+  const lines = suggestionsText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  let positiveFeedback = '';
+  let areasForImprovement = '';
+  let currentSection = '';
+
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    
+    // Check for positive sections
+    if (lowerLine.includes('customers love') || 
+        lowerLine.includes('positive') || 
+        lowerLine.includes('what customers love') ||
+        lowerLine.includes('1.')) {
+      currentSection = 'positive';
+      if (lowerLine.includes('1.') || lowerLine.includes('customers love')) {
         positiveFeedback += line + '\n';
-      } else if (line.trim() && currentSection === 'improvement') {
+      }
+    }
+    // Check for improvement sections
+    else if (lowerLine.includes('areas that need improvement') || 
+             lowerLine.includes('improvement') || 
+             lowerLine.includes('2.')) {
+      currentSection = 'improvement';
+      if (lowerLine.includes('2.') || lowerLine.includes('areas')) {
         areasForImprovement += line + '\n';
       }
     }
+    // Add content to current section
+    else if (currentSection === 'positive' && line.startsWith('   -')) {
+      positiveFeedback += line + '\n';
+    }
+    else if (currentSection === 'improvement' && line.startsWith('   -')) {
+      areasForImprovement += line + '\n';
+    }
+    // Handle numbered recommendations section
+    else if (lowerLine.includes('3.') || lowerLine.includes('recommendations')) {
+      currentSection = 'improvement';
+      areasForImprovement += line + '\n';
+    }
+    else if (currentSection === 'improvement' && line.startsWith('   -')) {
+      areasForImprovement += line + '\n';
+    }
+  }
 
+  // If parsing failed, display the raw AI response
+  if (!positiveFeedback.trim() && !areasForImprovement.trim()) {
     return {
-      positiveFeedback: positiveFeedback.trim() || 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.',
-      areasForImprovement: areasForImprovement.trim() || 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.'
+      positiveFeedback: suggestionsText.substring(0, suggestionsText.length / 2),
+      areasForImprovement: suggestionsText.substring(suggestionsText.length / 2)
     };
+  }
+
+  return {
+    positiveFeedback: positiveFeedback.trim() || 'Your AI-generated positive feedback analysis is available in the full suggestions.',
+    areasForImprovement: areasForImprovement.trim() || 'Your AI-generated improvement recommendations are available in the full suggestions.'
   };
+};
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
