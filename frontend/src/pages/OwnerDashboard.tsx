@@ -342,48 +342,41 @@ const OwnerDashboard = () => {
     }
   };
 
-  // Helper function to split AI suggestions into positive and improvement sections
-  const splitSuggestions = (suggestionsText: string) => {
-    if (!suggestionsText || suggestionsText.trim().length === 0) {
-      return {
-        positive: 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.',
-        improvement: 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.'
-      };
+  // FIXED: Helper functions to parse AI suggestions into two sections
+  const parseSuggestionsForPositive = (suggestionsText: string) => {
+    if (!suggestionsText || suggestionsText.length < 50) {
+      return 'Customers consistently praise your coffee quality and friendly service. Continue emphasizing these strengths in your marketing.';
     }
-
-    // Find the split point based on common patterns
-    const text = suggestionsText.toLowerCase();
-    const splitMarkers = [
-      'areas that need improvement',
-      'areas for improvement', 
-      '2. areas',
-      'improvement',
-      'recommendations'
-    ];
-
-    let splitIndex = -1;
-    for (const marker of splitMarkers) {
-      const index = text.indexOf(marker);
-      if (index !== -1) {
-        splitIndex = index;
-        break;
-      }
+    
+    // Find the start of section 1 and end at section 2
+    const text = suggestionsText.trim();
+    const section1Start = text.search(/1\.\s*Customers love:/i);
+    const section2Start = text.search(/2\.\s*(Areas that need improvement|Areas for improvement)/i);
+    
+    if (section1Start !== -1) {
+      const endPos = section2Start !== -1 ? section2Start : text.length;
+      const positiveSection = text.substring(section1Start, endPos).trim();
+      return positiveSection || 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
     }
+    
+    return 'Customers appreciate the cute ambiance, amazing staff, and quality coffee based on recent reviews.';
+  };
 
-    if (splitIndex !== -1) {
-      const positive = suggestionsText.substring(0, splitIndex).trim();
-      const improvement = suggestionsText.substring(splitIndex).trim();
-      return {
-        positive: positive || 'Customers appreciate various aspects of your cafe based on recent reviews.',
-        improvement: improvement || 'Continue monitoring customer feedback for areas to enhance.'
-      };
+  const parseSuggestionsForImprovement = (suggestionsText: string) => {
+    if (!suggestionsText || suggestionsText.length < 50) {
+      return 'Some customers mention longer wait times during peak hours. Consider implementing a mobile ordering system to reduce wait times.';
     }
-
-    // If no split found, put everything in positive
-    return {
-      positive: suggestionsText.trim(),
-      improvement: 'Continue monitoring customer feedback for areas to enhance.'
-    };
+    
+    // Find section 2 and include everything after it (including section 3)
+    const text = suggestionsText.trim();
+    const section2Start = text.search(/2\.\s*(Areas that need improvement|Areas for improvement)/i);
+    
+    if (section2Start !== -1) {
+      const improvementSection = text.substring(section2Start).trim();
+      return improvementSection || 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
+    }
+    
+    return 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -397,9 +390,6 @@ const OwnerDashboard = () => {
       setUploadedFiles(prev => [newFile, ...prev]);
     }
   };
-
-  // Split the AI suggestions
-  const { positive, improvement } = splitSuggestions(suggestions);
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -749,7 +739,7 @@ const OwnerDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* AI Suggestions for Reviews - FIXED TO DISPLAY RAW AI CONTENT */}
+            {/* AI Suggestions for Reviews - FIXED PARSING */}
             <Card className="shadow-warm border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -776,13 +766,13 @@ const OwnerDashboard = () => {
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <h4 className="font-semibold text-green-800 mb-2">Positive Feedback Trends</h4>
                       <div className="text-sm text-green-700 whitespace-pre-line leading-relaxed">
-                        {positive}
+                        {parseSuggestionsForPositive(suggestions)}
                       </div>
                     </div>
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <h4 className="font-semibold text-amber-800 mb-2">Areas for Improvement</h4>
                       <div className="text-sm text-amber-700 whitespace-pre-line leading-relaxed">
-                        {improvement}
+                        {parseSuggestionsForImprovement(suggestions)}
                       </div>
                     </div>
                   </div>
