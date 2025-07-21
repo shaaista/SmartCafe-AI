@@ -32,6 +32,13 @@ import {
   BarElement 
 } from "chart.js";
 Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+interface UploadedFile {
+  name: string;
+  date: string;
+  size: string;
+  status?: 'uploading' | 'uploaded' | 'error';
+  supabase_url?: string;
+}
 
 // Chat message interface
 interface ChatMessage {
@@ -45,10 +52,10 @@ const OwnerDashboard = () => {
   // API configuration for deployment
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartcafe-ai.onrender.com';
 
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: "orders_jan_2024.csv", date: "2024-01-15", size: "2.3 MB" },
-    { name: "orders_dec_2023.csv", date: "2023-12-30", size: "1.8 MB" }
-  ]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([
+  { name: "orders_jan_2024.csv", date: "2024-01-15", size: "2.3 MB" },
+  { name: "orders_dec_2023.csv", date: "2023-12-30", size: "1.8 MB" }
+]);
 
   // Add these new state variables
   const [suggestions, setSuggestions] = useState<string>('');
@@ -409,17 +416,66 @@ const OwnerDashboard = () => {
     return improvementContent.trim() || 'Focus on addressing pricing concerns and customer service consistency based on recent feedback.';
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const newFile = {
-        name: file.name,
-        date: new Date().toISOString().split('T')[0],
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
-      };
-      setUploadedFiles(prev => [newFile, ...prev]);
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  // Create FormData to send file
+  const formData = new FormData();
+  formData.append('csv_file', file);
+  formData.append('cafe_name', 'SmartCafe AI');
+
+  try {
+    // Create new file object that matches the UploadedFile interface
+    const newFile: UploadedFile = {
+      name: file.name,
+      date: new Date().toISOString().split('T')[0],
+      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      status: 'uploading' // This is now properly typed
+    };
+    
+    setUploadedFiles(prev => [newFile, ...prev]);
+
+    // Upload to backend
+    const response = await fetch(`${API_BASE_URL}/upload-csv`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      // Update file status to success
+      setUploadedFiles(prev => 
+        prev.map(f => 
+          f.name === file.name && f.status === 'uploading'
+            ? { ...f, status: 'uploaded' as const, supabase_url: data.file_url }
+            : f
+        )
+      );
+      console.log('File uploaded successfully:', data.file_url);
+    } else {
+      throw new Error(data.message || 'Upload failed');
+    }
+
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    // Update file status to error
+    setUploadedFiles(prev => 
+      prev.map(f => 
+        f.name === file.name && f.status === 'uploading'
+          ? { ...f, status: 'error' as const }
+          : f
+      )
+    );
+    alert('Error uploading file. Please try again.');
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -506,24 +562,37 @@ const OwnerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{file.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {file.date} • {file.size}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Download className="h-4 w-4" />
-                        Process
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+  {uploadedFiles.map((file, index) => (
+    <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+      <div className="flex items-center gap-3">
+        <FileText className="h-5 w-5 text-muted-foreground" />
+        <div>
+          <p className="font-medium">{file.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {file.date} • {file.size}
+            {file.status && (
+              <Badge 
+                variant={
+                  file.status === 'uploaded' ? 'default' : 
+                  file.status === 'error' ? 'destructive' : 
+                  'secondary'
+                }
+                className="ml-2 text-xs"
+              >
+                {file.status}
+              </Badge>
+            )}
+          </p>
+        </div>
+      </div>
+      <Button variant="outline" size="sm" className="gap-2">
+        <Download className="h-4 w-4" />
+        Process
+      </Button>
+    </div>
+  ))}
+</div>
+
               </CardContent>
             </Card>
 
