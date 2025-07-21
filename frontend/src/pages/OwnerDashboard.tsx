@@ -52,10 +52,8 @@ const OwnerDashboard = () => {
   // API configuration for deployment
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartcafe-ai.onrender.com';
 
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([
-  { name: "orders_jan_2024.csv", date: "2024-01-15", size: "2.3 MB" },
-  { name: "orders_dec_2023.csv", date: "2023-12-30", size: "1.8 MB" }
-]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+
 // Find where you have your other useState declarations and add this:
 const [loadingFiles, setLoadingFiles] = useState(true);
 
