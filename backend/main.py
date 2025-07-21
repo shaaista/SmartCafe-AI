@@ -10,7 +10,8 @@ from routes.get_reviews import router as recent_reviews_router
 from routes.chatbot_reviews import router as chatbot_router
 from routes.sentiment import router as sentiment_router
 from routes.keywords import router as keywords_router
-from routes.uploadcsv import uploadcsv_router
+from routes.uploadcsv import uploadcsv_router  # Add this line
+from routes.files import files_router  # Add this line
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -52,8 +53,8 @@ app.include_router(recent_reviews_router)
 app.include_router(chatbot_router)
 app.include_router(sentiment_router)
 app.include_router(keywords_router)
-app.include_router(uploadcsv_router)
-
+app.include_router(uploadcsv_router)  # Add this line
+app.include_router(files_router)      # Add this line
 
 @app.get("/")
 async def root():

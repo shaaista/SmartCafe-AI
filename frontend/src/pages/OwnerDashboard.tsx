@@ -56,6 +56,8 @@ const OwnerDashboard = () => {
   { name: "orders_jan_2024.csv", date: "2024-01-15", size: "2.3 MB" },
   { name: "orders_dec_2023.csv", date: "2023-12-30", size: "1.8 MB" }
 ]);
+// Find where you have your other useState declarations and add this:
+const [loadingFiles, setLoadingFiles] = useState(true);
 
   // Add these new state variables
   const [suggestions, setSuggestions] = useState<string>('');
@@ -70,6 +72,35 @@ const OwnerDashboard = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [loadingChatbot, setLoadingChatbot] = useState(false);
+  // Add this useEffect to fetch uploaded files
+useEffect(() => {
+  const fetchUploadedFiles = async () => {
+    try {
+      setLoadingFiles(true);
+      const response = await fetch(`${API_BASE_URL}/uploaded-files?cafe_name=SmartCafe AI`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        setUploadedFiles(data.files);
+      } else {
+        setUploadedFiles([]);
+      }
+    } catch (error) {
+      console.error('Error fetching uploaded files:', error);
+      setUploadedFiles([]);
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
+
+  fetchUploadedFiles();
+}, [API_BASE_URL]);
+
 
   // Add this useEffect for fetching suggestions
   useEffect(() => {
@@ -449,16 +480,15 @@ const OwnerDashboard = () => {
     const data = await response.json();
     
     if (data.status === 'success') {
-      // Update file status to success
-      setUploadedFiles(prev => 
-        prev.map(f => 
-          f.name === file.name && f.status === 'uploading'
-            ? { ...f, status: 'uploaded' as const, supabase_url: data.file_url }
-            : f
-        )
-      );
-      console.log('File uploaded successfully:', data.file_url);
-    } else {
+  // Remove the manual update and just refresh the file list
+  const response = await fetch(`${API_BASE_URL}/uploaded-files?cafe_name=SmartCafe AI`);
+  const filesData = await response.json();
+  if (filesData.status === 'success') {
+    setUploadedFiles(filesData.files);
+  }
+  console.log('File uploaded successfully:', data.file_url);
+}
+ else {
       throw new Error(data.message || 'Upload failed');
     }
 
@@ -557,48 +587,72 @@ const OwnerDashboard = () => {
             </Card>
 
             {/* Uploaded Files */}
-            <Card className="shadow-warm border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Uploaded Files
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-  {uploadedFiles.map((file, index) => (
-    <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-      <div className="flex items-center gap-3">
-        <FileText className="h-5 w-5 text-muted-foreground" />
-        <div>
-          <p className="font-medium">{file.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {file.date} • {file.size}
-            {file.status && (
-              <Badge 
-                variant={
-                  file.status === 'uploaded' ? 'default' : 
-                  file.status === 'error' ? 'destructive' : 
-                  'secondary'
-                }
-                className="ml-2 text-xs"
-              >
-                {file.status}
-              </Badge>
-            )}
-          </p>
-        </div>
+            {/* Uploaded Files */}
+<Card className="shadow-warm border-0">
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <FileText className="h-5 w-5 text-primary" />
+      Uploaded Files
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {loadingFiles ? (
+      <div className="space-y-3">
+        {[...Array(3)].map((_, index) => (
+          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 bg-muted rounded" />
+              <div>
+                <div className="h-4 w-32 bg-muted rounded mb-1" />
+                <div className="h-3 w-24 bg-muted rounded" />
+              </div>
+            </div>
+            <div className="h-8 w-20 bg-muted rounded" />
+          </div>
+        ))}
       </div>
-      <Button variant="outline" size="sm" className="gap-2">
-        <Download className="h-4 w-4" />
-        Process
-      </Button>
-    </div>
-  ))}
-</div>
+    ) : uploadedFiles.length > 0 ? (
+      <div className="max-h-64 overflow-y-auto space-y-3">
+        {uploadedFiles.map((file, index) => (
+          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">{file.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {file.date} • {file.size}
+                  {file.status && (
+                    <Badge 
+                      variant={
+                        file.status === 'uploaded' ? 'default' : 
+                        file.status === 'error' ? 'destructive' : 
+                        'secondary'
+                      }
+                      className="ml-2 text-xs"
+                    >
+                      {file.status}
+                    </Badge>
+                  )}
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="h-4 w-4" />
+              Process
+            </Button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div className="text-center py-8 text-muted-foreground">
+        <FileText className="h-12 w-12 mx-auto mb-2 text-muted" />
+        <p>No files uploaded yet</p>
+        <p className="text-xs">Upload a CSV file to get started</p>
+      </div>
+    )}
+  </CardContent>
+</Card>
 
-              </CardContent>
-            </Card>
 
             {/* Dashboard Placeholder */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
