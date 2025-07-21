@@ -39,14 +39,15 @@ async def get_uploaded_files(cafe_name: str = Query(default="SmartCafe AI")):
             formatted_date = upload_date.strftime('%Y-%m-%d')
             
             formatted_files.append({
-                'id': file['id'],
-                'name': file['filename'],
-                'date': formatted_date,
-                'size': f"{size_mb:.1f} MB",
-                'status': 'uploaded',
-                'supabase_url': file['file_url'],
-                'storage_path': file['storage_path']
-            })
+    'id': file['id'],
+    'name': file['filename'] if file['filename'] else 'Unknown File',  # Add fallback
+    'date': formatted_date,
+    'size': f"{size_mb:.1f} MB",
+    'status': 'uploaded',
+    'supabase_url': file['file_url'],
+    'storage_path': file['storage_path']
+})
+
 
         return JSONResponse(
             status_code=200,

@@ -85,6 +85,9 @@ useEffect(() => {
       
       const data = await response.json();
       
+      // Add this debug line to see what data you're getting
+      console.log('Fetched files data:', data);
+      
       if (data.status === 'success') {
         setUploadedFiles(data.files);
       } else {
@@ -100,6 +103,7 @@ useEffect(() => {
 
   fetchUploadedFiles();
 }, [API_BASE_URL]);
+
 
 
   // Add this useEffect for fetching suggestions
