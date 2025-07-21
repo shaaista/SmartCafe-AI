@@ -544,9 +544,13 @@ const OwnerDashboard = () => {
                     id="file-upload"
                   />
                   <label htmlFor="file-upload">
-                    <Button className="cursor-pointer bg-gradient-accent hover:opacity-90">
-                      Choose CSV File
-                    </Button>
+                    <button
+  onClick={() => document.getElementById('file-upload').click()}
+  className="cursor-pointer bg-gradient-accent hover:opacity-90 inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 py-2"
+>
+  Choose CSV File
+</button>
+
                   </label>
                 </div>
               </CardContent>
