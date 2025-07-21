@@ -4,8 +4,32 @@ from supabase import create_client, Client
 import os
 from datetime import datetime
 import uuid
-from werkzeug.utils import secure_filename
-import tempfile
+import re
+import unicodedata
+
+# Custom secure_filename function to replace werkzeug dependency
+def secure_filename(filename: str) -> str:
+    """Pass it a filename and it will return a secure version of it."""
+    if not filename:
+        return "unknown"
+    
+    # Normalize unicode characters to ASCII
+    filename = unicodedata.normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
+    
+    # Replace unsafe characters with underscores
+    filename = re.sub(r'[^A-Za-z0-9_.-]', '_', filename)
+    
+    # Remove multiple consecutive underscores/dots/dashes
+    filename = re.sub(r'[_.-]+', lambda m: m.group(0)[0], filename)
+    
+    # Remove leading/trailing dots and underscores
+    filename = filename.strip('._')
+    
+    # Ensure we have a filename
+    if not filename:
+        return "unknown"
+    
+    return filename
 
 # Create router instead of Blueprint
 uploadcsv_router = APIRouter()
@@ -58,7 +82,7 @@ async def upload_csv(
                 }
             )
 
-        # Generate unique filename
+        # Generate unique filename using custom secure_filename function
         original_filename = secure_filename(csv_file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
