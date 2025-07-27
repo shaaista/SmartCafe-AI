@@ -7,11 +7,12 @@ import uuid
 import re
 import unicodedata
 
+
 # Custom secure_filename function to replace werkzeug dependency
 def secure_filename(filename: str) -> str:
     """Pass it a filename and it will return a secure version of it."""
     if not filename:
-        return "unknown"
+        return "unknown.csv"
     
     # Normalize unicode characters to ASCII
     filename = unicodedata.normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
@@ -27,9 +28,10 @@ def secure_filename(filename: str) -> str:
     
     # Ensure we have a filename
     if not filename:
-        return "unknown"
+        return "unknown.csv"
     
     return filename
+
 
 # Create router instead of Blueprint
 uploadcsv_router = APIRouter()
@@ -48,9 +50,11 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ALLOWED_EXTENSIONS = {'csv'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB limit
 
+
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @uploadcsv_router.post("/upload-csv")
 async def upload_csv(
@@ -82,11 +86,14 @@ async def upload_csv(
                 }
             )
 
+        # Sanitize cafe_name to remove spaces/special characters
+        cafe_name_clean = re.sub(r'[^A-Za-z0-9_-]+', '_', cafe_name)
+
         # Generate unique filename using custom secure_filename function
         original_filename = secure_filename(csv_file.filename)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
-        filename = f"{cafe_name}_{timestamp}_{unique_id}_{original_filename}"
+        filename = f"{cafe_name_clean}_{timestamp}_{unique_id}_{original_filename}"
 
         # Upload to Supabase Storage
         bucket_name = 'csv-uploads'
@@ -142,6 +149,7 @@ async def upload_csv(
             }
         )
 
+
     except Exception as e:
         return JSONResponse(
             status_code=500,
@@ -151,33 +159,55 @@ async def upload_csv(
             }
         )
 
+
+
 @uploadcsv_router.get("/uploaded-files")
 async def get_uploaded_files(cafe_name: str = "default_cafe"):
-    """Get list of uploaded files for a cafe"""
+    """Get list of uploaded files for a cafe with formatted metadata"""
     try:
-        # Query uploaded files from database
         result = supabase.table('uploaded_files')\
             .select('*')\
             .eq('cafe_name', cafe_name)\
             .order('upload_timestamp', desc=True)\
             .execute()
 
+        formatted_files = []
+        for file in result.data:
+            size_mb = file.get('file_size', 0) / (1024 * 1024)
+            upload_date_str = file.get('upload_timestamp')
+            try:
+                upload_date = datetime.fromisoformat(upload_date_str.replace('Z', '+00:00'))
+                formatted_date = upload_date.strftime('%Y-%m-%d')
+            except Exception:
+                formatted_date = upload_date_str or ''
+
+            formatted_files.append({
+                'id': file['id'],
+                'name': file.get('filename', 'Unknown File'),
+                'date': formatted_date,
+                'size': f"{size_mb:.1f} MB",
+                'status': 'uploaded',
+                'supabase_url': file.get('file_url', ''),
+                'storage_path': file.get('storage_path', ''),
+            })
+
         return JSONResponse(
             status_code=200,
             content={
                 'status': 'success',
-                'files': result.data
+                'files': formatted_files
             }
         )
-
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 'status': 'error',
-                'message': f'Failed to retrieve files: {str(e)}'
+                'message': f'Failed to retrieve files: {str(e)}',
+                'files': []
             }
         )
+
 
 @uploadcsv_router.delete("/delete-file/{file_id}")
 async def delete_file(file_id: int):
@@ -202,7 +232,7 @@ async def delete_file(file_id: int):
         bucket_name = 'csv-uploads'
         
         # Delete from Supabase Storage
-        storage_result = supabase.storage.from_(bucket_name).remove([file_info['storage_path']])
+        supabase.storage.from_(bucket_name).remove([file_info['storage_path']])
         
         # Delete from database
         supabase.table('uploaded_files').delete().eq('id', file_id).execute()
