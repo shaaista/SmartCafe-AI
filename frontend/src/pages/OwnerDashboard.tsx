@@ -617,35 +617,37 @@ useEffect(() => {
     ) : uploadedFiles.length > 0 ? (
       <div className="max-h-64 overflow-y-auto space-y-3">
         {uploadedFiles.map((file, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{file.name || 'Unknown File'}</p>
+  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+    <div className="flex items-center gap-3">
+      <FileText className="h-5 w-5 text-muted-foreground" />
+      <div>
+        <p className="font-medium">
+          {file.name || file.name || 'Unknown File'}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {file.date} • {file.size}
+          {file.status && (
+            <Badge 
+              variant={
+                file.status === 'uploaded' ? 'default' : 
+                file.status === 'error' ? 'destructive' : 
+                'secondary'
+              }
+              className="ml-2 text-xs"
+            >
+              {file.status}
+            </Badge>
+          )}
+        </p>
+      </div>
+    </div>
+    <Button variant="outline" size="sm" className="gap-2">
+      <Download className="h-4 w-4" />
+      Process
+    </Button>
+  </div>
+))}
 
-                <p className="text-sm text-muted-foreground">
-                  {file.date} • {file.size}
-                  {file.status && (
-                    <Badge 
-                      variant={
-                        file.status === 'uploaded' ? 'default' : 
-                        file.status === 'error' ? 'destructive' : 
-                        'secondary'
-                      }
-                      className="ml-2 text-xs"
-                    >
-                      {file.status}
-                    </Badge>
-                  )}
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Process
-            </Button>
-          </div>
-        ))}
       </div>
     ) : (
       <div className="text-center py-8 text-muted-foreground">

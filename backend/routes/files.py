@@ -40,7 +40,7 @@ async def get_uploaded_files(cafe_name: str = Query(default="SmartCafe AI")):
             
             formatted_files.append({
     'id': file['id'],
-    'name': file['filename'] or 'Unknown File',  # Ensure we have a fallback
+    'name': file['filename'],  # Ensure we have a fallback
     'date': formatted_date,
     'size': f"{size_mb:.1f} MB",
     'status': 'uploaded',
